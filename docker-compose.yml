@@ -10,9 +10,10 @@ services:
       - TZ=Asia/Bangkok
 
   kafka:
-    image: quay.io/debezium/kafka:1.9
+    image: quay.io/debezium/kafka:2.5
     ports:
       - 9092:9092
+      - 9094:9094
     depends_on:
       - zookeeper
     environment:
@@ -20,8 +21,29 @@ services:
       - ZOOKEEPER_CONNECT=zookeeper:2181
       - KAFKA_BROKER=kafka:9092
 
+  watcher:
+    image: quay.io/debezium/kafka:2.5
+    command: watch-topic -a -k dbserver1.inventory.customers
+    depends_on:
+      - zookeeper
+      - kafka
+    links:
+      - zookeeper
+      - kafka
+
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    restart: "no"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:9092"
+    ports:
+      - 9000:9000
+    depends_on:
+      - kafka
+
   connect:
-    image: quay.io/debezium/connect:1.9
+    image: quay.io/debezium/connect:2.5
     restart: always
     ports:
       - 8083:8083
@@ -42,7 +64,7 @@ services:
   mariadb:
     image: mariadb:10.5
     ports:
-      - 3306:3306
+      - 3307:3306
     volumes:
       - ./docker/database/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
       - ./docker/database/conf.d/mysql.cnf:/etc/mysql/conf.d/mysql.cnf
